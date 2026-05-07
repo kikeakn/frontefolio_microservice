@@ -1,0 +1,14 @@
+{
+  "name": "frontefolio-api",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "migrate": "node db/migrate.js",
+    "seed": "node db/seed.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.5",
+    "mysql2": "^3.9.7"
+  }
+}

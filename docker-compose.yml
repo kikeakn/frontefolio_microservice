@@ -1,7 +1,9 @@
 version: '3.8'
 
 services:
+  # Solo se levanta en desarrollo local: docker compose --profile local up
   mysql:
+    profiles: [local]
     image: mysql:8
     container_name: frontefolio_mysql
     environment:
@@ -49,10 +51,6 @@ services:
     env_file: .env
     environment:
       PORT: 3001
-      DB_HOST: mysql
-    depends_on:
-      mysql:
-        condition: service_healthy
     restart: unless-stopped
 
   user-service:
@@ -61,10 +59,6 @@ services:
     env_file: .env
     environment:
       PORT: 3002
-      DB_HOST: mysql
-    depends_on:
-      mysql:
-        condition: service_healthy
     restart: unless-stopped
 
   catalog-service:
@@ -73,10 +67,6 @@ services:
     env_file: .env
     environment:
       PORT: 3003
-      DB_HOST: mysql
-    depends_on:
-      mysql:
-        condition: service_healthy
     restart: unless-stopped
 
   order-service:
@@ -85,10 +75,6 @@ services:
     env_file: .env
     environment:
       PORT: 3004
-      DB_HOST: mysql
-    depends_on:
-      mysql:
-        condition: service_healthy
     restart: unless-stopped
 
   payment-service:
@@ -97,10 +83,6 @@ services:
     env_file: .env
     environment:
       PORT: 3005
-      DB_HOST: mysql
-    depends_on:
-      mysql:
-        condition: service_healthy
     restart: unless-stopped
 
   logistics-service:
@@ -109,10 +91,6 @@ services:
     env_file: .env
     environment:
       PORT: 3006
-      DB_HOST: mysql
-    depends_on:
-      mysql:
-        condition: service_healthy
     restart: unless-stopped
 
   chat-service:
@@ -121,10 +99,6 @@ services:
     env_file: .env
     environment:
       PORT: 3007
-      DB_HOST: mysql
-    depends_on:
-      mysql:
-        condition: service_healthy
     restart: unless-stopped
 
 volumes:

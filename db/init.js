@@ -1,6 +1,8 @@
-// Ejecutar con: node db/init.js  (desde la raíz de frontefolio_api)
-const fs    = require('fs');
-const path  = require('path');
+// node db/init.js  (desde frontefolio_api/)
+// Uso alternativo: aplica schema.sql directamente (sin tracking de migraciones).
+// Para producción usa: node db/migrate.js && node db/seed.js
+const fs   = require('fs');
+const path = require('path');
 const mysql = require('mysql2/promise');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 

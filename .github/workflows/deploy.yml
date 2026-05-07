@@ -1,0 +1,103 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    branches: [main]
+    types: [completed]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Sync code to VPS
+        run: |
+          rsync -az --delete \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            ./ ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/opt/frontefolio/
+
+      - name: Write .env on VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          envs: JWT_SECRET,JWT_EXPIRES_IN,DB_HOST,DB_PORT,DB_NAME,DB_USER,DB_PASSWORD,VALID_CARDS,FRONTEND_CUSTOMER_URL,FRONTEND_ADMIN_URL
+          script: |
+            cat > /opt/frontefolio/.env <<EOF
+            PORT=3000
+            NODE_ENV=production
+
+            JWT_SECRET=${JWT_SECRET}
+            JWT_EXPIRES_IN=${JWT_EXPIRES_IN}
+
+            DB_HOST=${DB_HOST}
+            DB_PORT=${DB_PORT}
+            DB_NAME=${DB_NAME}
+            DB_USER=${DB_USER}
+            DB_PASSWORD=${DB_PASSWORD}
+
+            VALID_CARDS=${VALID_CARDS}
+
+            FRONTEND_CUSTOMER_URL=${FRONTEND_CUSTOMER_URL}
+            FRONTEND_ADMIN_URL=${FRONTEND_ADMIN_URL}
+
+            AUTH_SERVICE_URL=http://auth-service:3001
+            USER_SERVICE_URL=http://user-service:3002
+            CATALOG_SERVICE_URL=http://catalog-service:3003
+            ORDER_SERVICE_URL=http://order-service:3004
+            PAYMENT_SERVICE_URL=http://payment-service:3005
+            LOGISTICS_SERVICE_URL=http://logistics-service:3006
+            CHAT_SERVICE_URL=http://chat-service:3007
+            EOF
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_EXPIRES_IN: ${{ secrets.JWT_EXPIRES_IN }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          VALID_CARDS: ${{ secrets.VALID_CARDS }}
+          FRONTEND_CUSTOMER_URL: ${{ secrets.FRONTEND_CUSTOMER_URL }}
+          FRONTEND_ADMIN_URL: ${{ secrets.FRONTEND_ADMIN_URL }}
+
+      - name: Run migrations and seed
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          command_timeout: 5m
+          script: |
+            cd /opt/frontefolio
+            npm install --quiet
+            node db/migrate.js
+            node db/seed.js
+
+      - name: Build and restart containers
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          command_timeout: 10m
+          script: |
+            cd /opt/frontefolio
+            docker compose build --no-cache
+            docker compose up -d --remove-orphans
+            docker image prune -f

@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  build-services:
+    name: ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: api-gateway
+            path: services/api-gateway
+          - service: auth-service
+            path: services/auth-service
+          - service: user-service
+            path: services/user-service
+          - service: catalog-service
+            path: services/catalog-service
+          - service: order-service
+            path: services/order-service
+          - service: payment-service
+            path: services/payment-service
+          - service: logistics-service
+            path: services/logistics-service
+          - service: chat-service
+            path: services/chat-service
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.path }}
+          push: false
+          tags: frontefolio/${{ matrix.service }}:ci
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
