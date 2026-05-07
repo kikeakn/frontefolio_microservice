@@ -37,32 +37,37 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           envs: JWT_SECRET,JWT_EXPIRES_IN,DB_HOST,DB_PORT,DB_NAME,DB_USER,DB_PASSWORD,VALID_CARDS,FRONTEND_CUSTOMER_URL,FRONTEND_ADMIN_URL
           script: |
-            cat > /opt/frontefolio/.env <<EOF
-            PORT=3000
-            NODE_ENV=production
-
-            JWT_SECRET=${JWT_SECRET}
-            JWT_EXPIRES_IN=${JWT_EXPIRES_IN}
-
-            DB_HOST=${DB_HOST}
-            DB_PORT=${DB_PORT}
-            DB_NAME=${DB_NAME}
-            DB_USER=${DB_USER}
-            DB_PASSWORD=${DB_PASSWORD}
-
-            VALID_CARDS=${VALID_CARDS}
-
-            FRONTEND_CUSTOMER_URL=${FRONTEND_CUSTOMER_URL}
-            FRONTEND_ADMIN_URL=${FRONTEND_ADMIN_URL}
-
-            AUTH_SERVICE_URL=http://auth-service:3001
-            USER_SERVICE_URL=http://user-service:3002
-            CATALOG_SERVICE_URL=http://catalog-service:3003
-            ORDER_SERVICE_URL=http://order-service:3004
-            PAYMENT_SERVICE_URL=http://payment-service:3005
-            LOGISTICS_SERVICE_URL=http://logistics-service:3006
-            CHAT_SERVICE_URL=http://chat-service:3007
-            EOF
+            python3 - << 'PYEOF'
+            import os, pathlib
+            lines = [
+              "PORT=3000",
+              "NODE_ENV=production",
+              "",
+              f"JWT_SECRET={os.environ['JWT_SECRET']}",
+              f"JWT_EXPIRES_IN={os.environ['JWT_EXPIRES_IN']}",
+              "",
+              f"DB_HOST={os.environ['DB_HOST']}",
+              f"DB_PORT={os.environ['DB_PORT']}",
+              f"DB_NAME={os.environ['DB_NAME']}",
+              f"DB_USER={os.environ['DB_USER']}",
+              f"DB_PASSWORD={os.environ['DB_PASSWORD']}",
+              "",
+              f"VALID_CARDS={os.environ['VALID_CARDS']}",
+              "",
+              f"FRONTEND_CUSTOMER_URL={os.environ['FRONTEND_CUSTOMER_URL']}",
+              f"FRONTEND_ADMIN_URL={os.environ['FRONTEND_ADMIN_URL']}",
+              "",
+              "AUTH_SERVICE_URL=http://auth-service:3001",
+              "USER_SERVICE_URL=http://user-service:3002",
+              "CATALOG_SERVICE_URL=http://catalog-service:3003",
+              "ORDER_SERVICE_URL=http://order-service:3004",
+              "PAYMENT_SERVICE_URL=http://payment-service:3005",
+              "LOGISTICS_SERVICE_URL=http://logistics-service:3006",
+              "CHAT_SERVICE_URL=http://chat-service:3007",
+            ]
+            pathlib.Path("/opt/frontefolio/.env").write_text("\n".join(lines) + "\n")
+            print("✓ .env escrito correctamente")
+            PYEOF
         env:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           JWT_EXPIRES_IN: ${{ secrets.JWT_EXPIRES_IN }}
@@ -74,6 +79,18 @@ jobs:
           VALID_CARDS: ${{ secrets.VALID_CARDS }}
           FRONTEND_CUSTOMER_URL: ${{ secrets.FRONTEND_CUSTOMER_URL }}
           FRONTEND_ADMIN_URL: ${{ secrets.FRONTEND_ADMIN_URL }}
+
+      - name: Verify .env (claves y valores no sensibles)
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            echo "--- Claves presentes en .env ---"
+            grep -o '^[^=]*' /opt/frontefolio/.env | grep -v '^$'
+            echo "--- Valores no sensibles ---"
+            grep -E '^(PORT|NODE_ENV|DB_HOST|DB_PORT|DB_NAME|.*_SERVICE_URL)=' /opt/frontefolio/.env
 
       - name: Run migrations and seed
         uses: appleboy/ssh-action@v1

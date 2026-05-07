@@ -6,19 +6,27 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const MIGRATIONS_DIR = path.join(__dirname, 'migrations');
 
-function getConnection() {
-  return mysql.createConnection({
-    host:               process.env.DB_HOST     || 'localhost',
-    port:               process.env.DB_PORT     || 3306,
-    database:           process.env.DB_NAME     || 'frontefolio',
-    user:               process.env.DB_USER     || 'root',
-    password:           process.env.DB_PASSWORD || '',
+async function migrate() {
+  const host     = process.env.DB_HOST     || 'localhost';
+  const port     = process.env.DB_PORT     || 3306;
+  const user     = process.env.DB_USER     || 'root';
+  const password = process.env.DB_PASSWORD || '';
+  const dbName   = process.env.DB_NAME     || 'frontefolio';
+
+  // Paso 1: conectar sin base de datos y crearla si no existe
+  const base = await mysql.createConnection({ host, port, user, password });
+  await base.execute(
+    `CREATE DATABASE IF NOT EXISTS \`${dbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
+  );
+  await base.end();
+  console.log(`  Base de datos '${dbName}' verificada.`);
+
+  // Paso 2: conectar a la base de datos y aplicar migraciones
+  const conn = await mysql.createConnection({
+    host, port, user, password,
+    database:           dbName,
     multipleStatements: true,
   });
-}
-
-async function migrate() {
-  const conn = await getConnection();
 
   await conn.execute(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -38,7 +46,6 @@ async function migrate() {
   let ran = 0;
   for (const file of files) {
     if (appliedSet.has(file)) continue;
-
     console.log(`  → Aplicando ${file}...`);
     const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, file), 'utf8');
     await conn.query(sql);
