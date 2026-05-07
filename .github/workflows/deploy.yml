@@ -14,23 +14,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Debug secrets (longitud, no valores)
-        run: |
-          check() { local v="$1" n="$2"; [ -z "$v" ] && echo "❌ $n: VACÍO" || echo "✓  $n: ${#v} caracteres"; }
-          check "${{ secrets.VPS_HOST }}"             VPS_HOST
-          check "${{ secrets.VPS_USER }}"             VPS_USER
-          check "${{ secrets.VPS_SSH_KEY }}"          VPS_SSH_KEY
-          check "${{ secrets.JWT_SECRET }}"           JWT_SECRET
-          check "${{ secrets.JWT_EXPIRES_IN }}"       JWT_EXPIRES_IN
-          check "${{ secrets.DB_HOST }}"              DB_HOST
-          check "${{ secrets.DB_PORT }}"              DB_PORT
-          check "${{ secrets.DB_NAME }}"              DB_NAME
-          check "${{ secrets.DB_USER }}"              DB_USER
-          check "${{ secrets.DB_PASSWORD }}"          DB_PASSWORD
-          check "${{ secrets.VALID_CARDS }}"          VALID_CARDS
-          check "${{ secrets.FRONTEND_CUSTOMER_URL }}" FRONTEND_CUSTOMER_URL
-          check "${{ secrets.FRONTEND_ADMIN_URL }}"   FRONTEND_ADMIN_URL
-
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh
