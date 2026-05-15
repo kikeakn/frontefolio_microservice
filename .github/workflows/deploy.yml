@@ -35,5 +35,22 @@ jobs:
             echo "Estado de contenedores:"
             docker ps
 
-            echo "Health check:"
-            curl -f http://localhost:3000/health
+            echo "Esperando a que el gateway esté listo..."
+            sleep 15
+
+            echo "Health check con reintentos:"
+            for i in {1..10}; do
+              if curl -f http://localhost:3000/health; then
+                echo "Deploy correcto"
+                exit 0
+              fi
+
+              echo "Gateway aún no listo. Reintento $i/10..."
+              docker logs frontefolio_gateway --tail=20 || true
+              sleep 5
+            done
+
+            echo "Error: el gateway no respondió correctamente"
+            docker ps
+            docker logs frontefolio_gateway --tail=80 || true
+            exit 1
